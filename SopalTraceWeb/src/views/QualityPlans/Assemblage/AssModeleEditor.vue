@@ -1,6 +1,6 @@
 <template>
   <div class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-800">
-    <ConfirmDialog />
+    <Toast position="top-right" />
     <VersioningDialog :visible="showVersioningDialog"
                       :mode="versioningMode"
                       :is-loading="isLoading"
@@ -44,24 +44,27 @@
         <div class="p-6 md:p-8">
           <div class="flex flex-col md:flex-row items-center justify-between p-6 bg-slate-50 border-b border-slate-200">
             <div class="flex-1 w-full md:w-auto">
-              <FabModeleHeader :is-edit-mode="isEditMode" :is-read-only="isReadOnly" />
+              <AssModeleHeader :is-edit-mode="isEditMode" :is-read-only="isReadOnly">
+                <template #actions>
+                  <button v-if="!isReadOnly" @click="() => fileInput.click()" class="px-4 py-2 bg-[#059669] text-white hover:bg-[#047857] rounded-lg border border-[#059669] text-xs font-bold flex items-center gap-2 transition-colors shadow-sm">
+                    <i class="pi pi-file-excel"></i>
+                    <span>Importer la structure Excel</span>
+                  </button>
+                  <button v-if="!isReadOnly" @click="showColumnModal = true" class="text-xs font-bold px-4 py-2 bg-[#0f172a] text-white rounded-lg border border-[#0f172a] hover:bg-[#1e293b] transition-colors flex items-center gap-2 shadow-sm ml-2">
+                    <i class="pi pi-sliders-h text-sm"></i>
+                    <span>Configurer Colonnes</span>
+                  </button>
+                  <input type="file" ref="fileInput" @change="onFileSelected" accept=".xlsx,.xls" class="hidden" />
+                </template>
+              </AssModeleHeader>
             </div>
           </div>
 
-          <div class="mb-4 mt-6 flex items-center justify-between">
-            <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest">2. Structure des lignes de contrle</h3>
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mt-6">2. Structure des lignes de contrôle</h3>
           </div>
 
-          <template v-if="!hasValidStructure">
-            <div class="p-8 text-center bg-amber-50 rounded-lg border border-amber-200 mb-6 flex flex-col items-center justify-center">
-              <i class="pi pi-file-excel text-amber-500 text-4xl mb-3"></i>
-              <h4 class="text-sm font-bold text-amber-800 mb-1">Structure PRC non définie</h4>
-              <p class="text-sm text-amber-700 max-w-lg">Le formulaire sélectionné est à l'état de brouillon. Le Superviseur Qualité doit définir la structure du plan avant que vous puissiez créer des modèles ou des plans par article.</p>
-            </div>
-          </template>
-          
-          <template v-else>
-            <template v-if="groupes.length === 0">
+          <template v-if="groupes.length === 0">
             <div class="p-8 text-center text-slate-400 text-sm italic bg-slate-50 rounded-lg border border-slate-200 mb-6">
               Cliquez sur "Créer une nouvelle section" pour commencer.
             </div>
@@ -85,9 +88,9 @@
           <!-- Mode EDITION -->
           <div v-else class="border border-slate-200 rounded-lg overflow-x-auto shadow-sm mb-6 bg-white">
             <table class="w-full text-left border-collapse min-w-[1200px]">
-              <FabTableHeader :columns="modeleColumns" />
+              <AssTableHeader :columns="modeleColumns" />
               
-              <FabSectionCard 
+              <AssSectionCard 
                 v-for="(groupe, index) in groupes" 
                 :key="groupe.id" 
                 :groupe="groupe" 
@@ -97,7 +100,7 @@
                 @update-groupe="(updatedGroupe) => mettreAJourGroupe(index, updatedGroupe)"
                 @section-type-required="() => toast.add({ severity: 'warn', summary: 'Type de section requis', detail: 'Veuillez définir la nature de la section avant d\'ajouter une ligne.', life: 4000 })"
               >
-                <FabLigneControl 
+                <AssLigneControl 
                   v-for="ligne in groupe.lignes" 
                   :key="ligne.id" 
                   :ligne="ligne"
@@ -107,16 +110,15 @@
                   @remove="(ligneId) => supprimerLigneASection(index, ligneId)"
                   @update="(updatedLigne) => mettreAJourLigne(index, updatedLigne)"
                 />
-              </FabSectionCard>
+              </AssSectionCard>
             </table>
           </div>
-            
-            <div class="mt-2" v-if="!isReadOnly">
-              <button @click="ajouterGroupe" class="w-full p-4 bg-slate-50 text-center border border-dashed border-slate-300 hover:border-blue-400 rounded-lg hover:bg-blue-50 transition-colors text-slate-500 hover:text-blue-600 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
-                <i class="pi pi-plus-circle text-lg"></i> Créer une nouvelle section
-              </button>
-            </div>
-          </template>
+          
+          <div class="mt-2" v-if="!isReadOnly">
+            <button @click="ajouterGroupe" class="w-full p-4 bg-slate-50 text-center border border-dashed border-slate-300 hover:border-blue-400 rounded-lg hover:bg-blue-50 transition-colors text-slate-500 hover:text-blue-600 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              <i class="pi pi-plus-circle text-lg"></i> Créer une nouvelle section
+            </button>
+          </div>
 
           <!-- Notes & Légende en mode éditeur uniquement -->
           <div v-if="!isReadOnly" class="mt-2">
@@ -159,9 +161,10 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useFabModeleStore } from '@/stores/fabModeleStore';
+import { useAssModeleStore } from '@/stores/assModeleStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
+import Toast from 'primevue/toast';
 
 import { qualityPlansService } from '@/services/qualityPlansService';
 import { useModeleVersioning } from '@/composables/useVersioning';
@@ -173,24 +176,23 @@ import PlanHeader from '@/components/Shared/PlanHeader.vue';
 import EditorActions from '@/components/Shared/EditorActions.vue';
 import RemarquesLegendeBox from '@/components/Shared/RemarquesLegendeBox.vue';
 import PlanReadView from '@/components/Shared/PlanReadView.vue';
-import FabModeleHeader from '@/components/Fabrication/FabModeleHeader.vue';
-import FabTableHeader from '@/components/Fabrication/FabTableHeader.vue';
-import FabSectionCard from '@/components/Fabrication/FabSectionCard.vue';
-import FabLigneControl from '@/components/Fabrication/FabLigneControl.vue'; 
+import AssModeleHeader from '@/components/Assemblage/AssModeleHeader.vue';
+import AssTableHeader from '@/components/Assemblage/AssTableHeader.vue';
+import AssSectionCard from '@/components/Assemblage/AssSectionCard.vue';
+import AssLigneControl from '@/components/Assemblage/AssLigneControl.vue'; 
 import VersioningDialog from '@/components/Shared/VersioningDialog.vue';
 import ColumnConfigurator from '@/components/Shared/ColumnConfigurator.vue';
-import ConfirmDialog from 'primevue/confirmdialog';
 
 import { useEditorSections } from '@/composables/useEditorSections';
 import { useEditorValidation } from '@/composables/useEditorValidation';
 
-const store = useFabModeleStore();
+const store = useAssModeleStore();
 const roleStore = useAuthStore();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 
-const returnUrl = computed(() => '/dev/fab/modeles');
+const returnUrl = computed(() => '/dev/hub');
 
 // ============================================================================
 // ÉTAT LOCAL (Métier)
@@ -210,7 +212,7 @@ const statut = ref('BROUILLON');
 const version = ref(0);
 const showVersioningDialog = ref(false);
 const showColumnModal = ref(false);
-const versioningMode = ref('FAB');
+const versioningMode = ref('ASS');
 const isAutoVersioning = ref(false);
 
 const { 
@@ -251,27 +253,6 @@ const baseModeleColumns = [
   { key: 'observations', label: 'Observations', width: 'flex-1' }
 ];
 
-const hasValidStructure = computed(() => {
-  const codeRef = store.entete.refFormulaireCodeReference;
-  if (!codeRef) return false;
-
-  const formulaires = store.formulairesReferences || [];
-  const refObj = formulaires.find(r => r.codeReference === codeRef);
-
-  if (refObj) {
-    const s = typeof refObj.statut === 'string' ? refObj.statut.trim().toUpperCase() : refObj.statut;
-    const S = typeof refObj.Statut === 'string' ? refObj.Statut.trim().toUpperCase() : refObj.Statut;
-    if (s === 'ACTIF' || s === 1 || S === 'ACTIF' || S === 1) {
-      return true;
-    }
-  }
-
-  const configCols = store.entete.configurationColonnes;
-  if (configCols && configCols.length > 0) return true;
-
-  return false;
-});
-
 const modeleColumns = computed(() => {
   let cols = [...baseModeleColumns];
   const customCols = store.entete.configurationColonnes || [];
@@ -293,6 +274,7 @@ const modeleColumns = computed(() => {
 });
 
 const isLoading = computed(() => store.isLoading);
+
 const isEditMode = computed(() => !!modeleEditionId.value);
 const isArchived = computed(() => statut.value === 'ARCHIVE');
 
@@ -337,7 +319,7 @@ const headerTitle = computed(() => {
   }
 
   if (nature === 'CORPS' || nature === 'VOLANT') {
-    return `Plan en cours de fabrication ${nature}`;
+    return `Plan d'assemblage ${nature}`;
   }
 
   if (isEditMode.value) return isArchived.value ? 'Restauration d\'Archive' : `Édition du Plan Générique`;
@@ -384,10 +366,70 @@ const actionButtonVariant = computed(() => {
   return 'primary';
 });
 
+const fileInput = ref(null);
+
+const onFileSelected = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    store.isLoading = true;
+    const response = await qualityPlansService.importExcel(formData);
+    const parsedData = response.data.data;
+
+    if (parsedData && parsedData.sections) {
+      const newSections = parsedData.sections.map(sec => ({
+        id: sec.id || crypto.randomUUID(),
+        isFromDb: false,
+        libelleSection: sec.nom,
+        typeSectionId: sec.typeSectionId,
+        modeFreq: sec.modeFreq,
+        periodiciteId: sec.periodiciteId,
+        freqNum: sec.freqNum,
+        typeVariable: sec.typeVariable,
+        freqHours: sec.freqHours,
+        lignes: sec.lignes.map(lig => ({
+          id: lig.id || crypto.randomUUID(),
+          isFromDb: false,
+          typeCaracteristiqueId: lig.typeCaracteristiqueId,
+          typeControleId: lig.typeControleId,
+          moyenControleId: lig.moyenControleId,
+          instrumentCode: lig.instrumentCode,
+          valeurNominale: lig.valeurNominale,
+          toleranceSuperieure: lig.toleranceSuperieure,
+          toleranceInferieure: lig.toleranceInferieure,
+          unite: lig.unite || '',
+          limiteSpecTexte: lig.limiteSpecTexte,
+          observations: lig.observations,
+          instruction: lig.instruction,
+          estCritique: lig.estCritique,
+          libelleAffiche: lig.libelleAffiche
+        }))
+      }));
+
+      groupes.value = newSections;
+
+      await store.fetchDictionnaires();
+      toast.add({ severity: 'success', summary: 'Import réussi', detail: 'Les données ont été chargées depuis le fichier Excel.', life: 4000 });
+      
+      // Réinitialiser le snapshot après l'import pour que isDirty passe à true
+      updateCurrentSnapshot(createModeleSnapshot(store.entete, groupes.value));
+    }
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Erreur d\'import', detail: error.response?.data?.message || 'Impossible de lire le fichier.', life: 4000 });
+  } finally {
+    store.isLoading = false;
+    if (fileInput.value) fileInput.value.value = '';
+  }
+};
+
 onMounted(async () => {
   try {
     await store.fetchDictionnaires();
-    await store.fetchFormulairesReferences('EN_COURS_DE_FABRICATION');
+    await store.fetchFormulairesReferences('EN_COURS_DE_ASSEMBLAGE');
     
     if (route.params.id && route.params.id !== 'nouveau') {
       await chargerModelePourEdition(route.params.id);
@@ -687,7 +729,6 @@ const resetForNewModele = () => {
   statut.value = 'BROUILLON';
   version.value = 0;
   store.entete = { 
-    ...store.entete,
     operationCode: '', 
     natureComposantCode: '', 
     typeRobinetCode: '', 

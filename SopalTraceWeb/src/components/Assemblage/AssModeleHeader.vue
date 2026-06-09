@@ -1,7 +1,11 @@
 <template>
   <div class="mb-10">
-    <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4">1. Informations générales</h3>
-    
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+      <h3 class="text-[11px] font-black text-slate-500 uppercase tracking-widest">1. Informations générales</h3>
+      <div class="flex items-center gap-3">
+        <slot name="actions"></slot>
+      </div>
+    </div>
     <!-- NOUVEAU DESIGN POUR REF FORMULAIRE -->
     <div v-if="!isEditMode" class="bg-blue-50 border border-blue-100 p-4 rounded-xl flex flex-col md:flex-row gap-4 mb-6 shadow-inner">
       <div class="flex items-center text-blue-800 font-black tracking-widest text-xs min-w-[150px]">
@@ -30,8 +34,8 @@
         <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1.5">Famille *</label>
         <select 
           v-model="store.entete.familleProduitCode" 
-          :disabled="isEditMode || isReadOnly" 
-          :class="['w-full rounded px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 transition-shadow', (isEditMode || isReadOnly) ? 'cursor-not-allowed bg-gray-100 border-slate-200 text-slate-500' : 'bg-white border border-slate-300 text-slate-800 cursor-pointer']">       
+          :disabled="isEditMode || isReadOnly || isPiston" 
+          :class="['w-full rounded px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 transition-shadow', (isEditMode || isReadOnly || isPiston) ? 'cursor-not-allowed bg-gray-100 border-slate-200 text-slate-500' : 'bg-white border border-slate-300 text-slate-800 cursor-pointer']">       
           <option value="">-- Sélectionner --</option>
           <option v-for="fam in famillesFiltrees" :key="fam.code" :value="fam.code">
             {{ fam.code }}
@@ -89,6 +93,17 @@
           :class="['w-full rounded px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 transition-shadow', (isEditMode || isReadOnly) ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border border-slate-300 text-slate-800']">
       </div>
 
+      <div class="pt-4">
+        <label class="block text-[10px] font-bold text-slate-700 uppercase mb-1.5">Version de départ</label>
+        <input 
+          v-model.number="store.entete.versionInitiale" 
+          type="number" 
+          min="0" 
+          placeholder="Ex: 0"
+          :disabled="isEditMode || isReadOnly" 
+          :class="['w-full rounded px-3 py-2 text-sm font-semibold outline-none focus:border-blue-500 transition-shadow', (isEditMode || isReadOnly) ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white border border-slate-300 text-slate-800']">
+      </div>
+
     </div>
 
 
@@ -98,12 +113,10 @@
 <script setup>
 import { computed, watch, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { useFabModeleStore } from '@/stores/fabModeleStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAssModeleStore } from '@/stores/assModeleStore';
 import { parseDesignation } from '@/utils/designationParser';
 
-const store = useFabModeleStore();
-const roleStore = useAuthStore();
+const store = useAssModeleStore();
 const route = useRoute();
 const props = defineProps({
   isEditMode: {
@@ -130,12 +143,6 @@ const hasExistingVersion = computed(() => {
   
   return hasVersion || hasConfig;
 });
-
-  watch(formulairesReferences, (newRefs) => {
-    if (newRefs && newRefs.length > 0 && !refFormulaireSelected.value && !props.isEditMode) {
-      refFormulaireSelected.value = newRefs[0].id;
-    }
-  }, { immediate: true });
 
   watch(refFormulaireSelected, async (newRefId) => {
   if (!newRefId) return;
@@ -212,16 +219,20 @@ const afficherPoste = computed(() => {
   return famille.includes('soupape') && article === 'PF';
 });
 
+const isPiston = computed(() => {
+  return String(store.entete.natureComposantCode || '').trim().toUpperCase() === 'PISTON';
+});
+
 // =========================================================================
 // FILTRES DYNAMIQUES
 // =========================================================================
 
 const composantsFiltres = computed(() => {
   let toutesLesNatures = store.naturesComposant || [];
-    
+  
   toutesLesNatures = toutesLesNatures.filter(n => {
     const code = (n.code || '').trim().toUpperCase();
-    return code !== 'PISTON' && code !== 'PF';
+    return code === 'PISTON' || code === 'PF';
   });
 
   const selectedOp = (store.entete.operationCode || '').trim().toUpperCase();
@@ -238,7 +249,12 @@ const composantsFiltres = computed(() => {
 });
 
 const famillesFiltrees = computed(() => {
-  return store.famillesProduit || [];
+  const allFamilies = store.famillesProduit || [];
+  if (isPiston.value) {
+    // On ajoute 'TOUS' au début mais on laisse les autres familles accessibles
+    return [{ code: 'TOUS' }, ...allFamilies];
+  }
+  return allFamilies;
 });
 
 const operationsFiltrees = computed(() => {
@@ -250,7 +266,7 @@ const operationsFiltrees = computed(() => {
 
   let gammesFiltrees = gammes.filter(g => {
     const nat = (g.natureComposantCode || '').trim().toUpperCase();
-    return nat !== 'PISTON' && nat !== 'PF';
+    return nat === 'PISTON' || nat === 'PF';
   });
 
   // Si une nature est sélectionnée, on filtre les opérations liées à cette nature
@@ -284,6 +300,9 @@ const postesDisponibles = computed(() =>
 watch(() => store.entete.familleProduitCode, (newVal, oldVal) => {
   if (isAutoFilling.value || store.isBeingLoaded) return;  // ✅ Pas de cascade pendant le chargement
   if (newVal !== oldVal) {
+    // Évite la boucle si c'est un auto-remplissage PISTON
+    if (newVal === 'TOUS' && isPiston.value) return;
+
     store.entete.operationCode = '';
     store.entete.natureComposantCode = '';
     store.entete.posteCode = '';
@@ -294,6 +313,9 @@ watch(() => store.entete.familleProduitCode, (newVal, oldVal) => {
 watch(() => store.entete.operationCode, (newVal, oldVal) => {
   if (isAutoFilling.value || store.isBeingLoaded) return;  // ✅ Pas de cascade pendant le chargement
   if (newVal !== oldVal) {
+    // Évite la boucle si c'est un auto-remplissage PISTON
+    if (newVal === 'ASS' && isPiston.value) return;
+
     store.entete.natureComposantCode = '';
     store.entete.posteCode = '';
   }
@@ -304,6 +326,20 @@ watch(() => store.entete.natureComposantCode, (newVal, oldVal) => {
   if (isAutoFilling.value || store.isBeingLoaded) return;  // ✅ Pas de cascade pendant le chargement
   if (newVal !== oldVal) {
     store.entete.posteCode = '';
+    
+    const isPistonNew = String(newVal || '').trim().toUpperCase() === 'PISTON';
+    const isPistonOld = String(oldVal || '').trim().toUpperCase() === 'PISTON';
+
+    // Règle spécifique PISTON : Force la famille et l'opération
+    if (isPistonNew) {
+      // Note: On utilise 'TOUS' ou 'ASS AUTO' selon ce qui est défini dans famillesFiltrees
+      store.entete.familleProduitCode = 'TOUS'; 
+      store.entete.operationCode = 'ASS';
+    } else if (isPistonOld) {
+      // Si on quitte le mode PISTON, on vide les champs forcés
+      store.entete.familleProduitCode = '';
+      store.entete.operationCode = '';
+    }
   }
 });
 

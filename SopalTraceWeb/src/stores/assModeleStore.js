@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { fabPlanService } from '@/services/fabPlanService';
+import { assPlanService } from '@/services/assPlanService';
 import { qualityPlansService } from '@/services/qualityPlansService';
 
-export const useFabModeleStore = defineStore('fabModele', () => {
+export const useAssModeleStore = defineStore('assModele', () => {
   // --- DICTIONNAIRES ---
   const operations = ref([]);
   const typesRobinet = ref([]);
@@ -47,14 +47,14 @@ export const useFabModeleStore = defineStore('fabModele', () => {
     const fam = entete.value.familleProduitCode ? `-${entete.value.familleProduitCode}` : '';
     const poste = entete.value.posteCode ? `P${entete.value.posteCode}` : '';
 
-    const prefix = (nat === 'PF') ? 'PLAN' : 'MOD';
+    const prefix = (nat === 'PF' || nat === 'PISTON') ? 'PLAN' : 'MOD';
     return `${prefix}-${op}-${nat}${fam}-${poste}`.toUpperCase();
   });
 
   // --- ACTIONS ---
   const fetchDictionnaires = async () => {
     try {
-      const response = await fabPlanService.getDictionnaires();
+      const response = await assPlanService.getDictionnaires();
       const data = response.data.data;
 
       operations.value = data.operations || [];
@@ -146,7 +146,7 @@ export const useFabModeleStore = defineStore('fabModele', () => {
     natureComposantCode: entete.value.natureComposantCode || '',
     operationCode: entete.value.operationCode || '',
     posteCode: entete.value.posteCode || null,
-    familleProduitCode: entete.value.familleProduitCode || null,
+    familleProduitCode: (entete.value.natureComposantCode?.trim().toUpperCase() === 'PISTON') ? null : (entete.value.familleProduitCode || null),
     notes: entete.value.notes || "",
     legendeMoyens: legendeMoyens || '',
     versionInitiale: entete.value.versionInitiale,
@@ -184,7 +184,7 @@ export const useFabModeleStore = defineStore('fabModele', () => {
     isLoading.value = true;
     try {
       const payload = mapPayload(legendeMoyens);
-      const res = await fabPlanService.creerModele(payload);
+      const res = await assPlanService.creerModele(payload);
       return res.data; // Return the whole data which includes modeleId and version
     } finally {
       isLoading.value = false;
@@ -200,7 +200,7 @@ export const useFabModeleStore = defineStore('fabModele', () => {
         modifiePar: 'Admin',
         motifModification: motif
       };
-      const res = await fabPlanService.nouvelleVersionModele(payload);
+      const res = await assPlanService.nouvelleVersionModele(payload);
       return res.data; // Return full data with modeleId and version
     } finally {
       isLoading.value = false;
@@ -212,7 +212,7 @@ export const useFabModeleStore = defineStore('fabModele', () => {
     try {
       const payload = mapPayload(legendeMoyens);
       // Ensure we send sections and other required fields properly for PUT
-      const res = await fabPlanService.updateModeleValeurs(id, payload);
+      const res = await assPlanService.updateModeleValeurs(id, payload);
       return res.data;
     } finally {
       isLoading.value = false;
@@ -222,7 +222,7 @@ export const useFabModeleStore = defineStore('fabModele', () => {
   const activerModeleDraft = async (id) => {
     isLoading.value = true;
     try {
-      const res = await fabPlanService.activerModele(id);
+      const res = await assPlanService.activerModele(id);
       return res.data;
     } finally {
       isLoading.value = false;
