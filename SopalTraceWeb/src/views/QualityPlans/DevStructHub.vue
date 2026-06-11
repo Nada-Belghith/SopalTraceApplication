@@ -6,9 +6,9 @@
     <div class="mb-4 md:mb-0">
       <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
         <i class="pi pi-th-large text-blue-600"></i>
-        Plans par Article
+        Hub des Plans Spécifiques
       </h1>
-      <p class="text-slate-500 text-sm mt-1">Visualisez et gérez vos plans de contrôle instanciés par article.</p>
+      <p class="text-slate-500 text-sm mt-1">Visualisez les structures de référence des plans en cours de fabrication.</p>
     </div>
 
     <!-- ========================================== -->
@@ -41,7 +41,6 @@
             <select v-model="vueActuelle" class="appearance-none bg-slate-50 border border-slate-200 text-slate-700 py-2 pl-3 pr-8 rounded-lg text-sm font-medium focus:outline-none focus:border-blue-500 cursor-pointer">
               <option value="ALL">Tous les statuts</option>
               <option value="ACTIF">Actifs</option>
-              <option value="BROUILLON">Brouillons</option>
               <option value="ARCHIVE">Archivés</option>
             </select>
             <i class="pi pi-angle-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
@@ -62,11 +61,6 @@
             <input type="text" v-model="searchQuery" placeholder="Rechercher un plan ou article..."
               class="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm w-full md:w-72 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
           </div>
-          
-          <!-- Bouton Nouveau Plan -->
-          <router-link to="/dev/fab/plans/nouveau" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2">
-            <i class="pi pi-plus"></i> Nouveau Plan
-          </router-link>
         </div>
       </div>
     </div>
@@ -84,7 +78,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         <!-- Boucle sur les plans paginés -->
         <div v-for="plan in paginatedPlans" :key="plan.id"
-          @click="plan.statut === 'BROUILLON' ? editer(plan.category, plan.id) : consulter(plan.category, plan.id)"
+          @click="consulter(plan.category, plan.id)"
           :class="[
             'group bg-white border rounded-xl p-5 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col h-full',
             categoryStyles[plan.category]?.hoverClass || 'hover:border-slate-300 border-slate-200',
@@ -147,14 +141,11 @@
 
             <!-- Actions -->
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button v-if="plan.statut === 'ACTIF' || plan.statut === 'BROUILLON'" @click.stop="editer(plan.category, plan.id)" class="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Éditer">
+              <button v-if="plan.statut === 'ACTIF'" @click.stop="editer(plan.category, plan.id)" class="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Éditer">
                 <i class="pi pi-pencil"></i>
               </button>
               <button v-if="plan.statut === 'ACTIF'" @click.stop="confirmArchivage(plan)" class="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-colors" title="Archiver">
                 <i class="pi pi-box"></i>
-              </button>
-              <button v-if="plan.statut === 'BROUILLON'" @click.stop="confirmSuppression(plan)" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Supprimer">
-                <i class="pi pi-trash"></i>
               </button>
               <button @click.stop="consulter(plan.category, plan.id)" class="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors" title="Visualiser">
                 <i class="pi pi-eye"></i>
@@ -235,7 +226,7 @@ onMounted(async () => {
 const chargerPlans = async () => {
   try {
     isLoading.value = true;
-    const response = await apiClient.get('/hub/plans');
+    const response = await apiClient.get('/hub/structures');
     plans.value = response.data.data || response.data || [];
   } catch {
     toast.error('Impossible de charger les plans');
@@ -297,31 +288,6 @@ const confirmArchivage = (plan) => {
     rejectLabel: 'Annuler',
     accept: () => archiverPlan(plan)
   });
-};
-
-const confirmSuppression = (plan) => {
-  confirm.ask({
-    message: `Voulez-vous vraiment supprimer définitivement le brouillon "${plan.libelle || plan.codeArticleSage}" ?`,
-    header: 'Confirmation de suppression',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    acceptLabel: 'Oui, Supprimer',
-    rejectLabel: 'Annuler',
-    accept: () => supprimerPlan(plan)
-  });
-};
-
-const supprimerPlan = async (plan) => {
-  try {
-    isLoading.value = true;
-    await apiClient.delete(`/hub/plans/${plan.category}/${plan.id}`);
-    plans.value = plans.value.filter(p => p.id !== plan.id);
-    toast.success(`Le brouillon a été supprimé avec succès.`);
-  } catch {
-    toast.error('La suppression a échoué.');
-  } finally {
-    isLoading.value = false;
-  }
 };
 
 const archiverPlan = async (plan) => {
