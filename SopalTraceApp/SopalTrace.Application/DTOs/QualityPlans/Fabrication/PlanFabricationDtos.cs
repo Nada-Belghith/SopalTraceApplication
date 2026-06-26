@@ -1,12 +1,113 @@
 using System;
 using System.Collections.Generic;
+using SopalTrace.Application.Helpers;
 
-namespace SopalTrace.Application.DTOs.QualityPlans.Documents;
+namespace SopalTrace.Application.DTOs.QualityPlans.Fabrication;
 
-public class DocumentEnteteDto
+public class CreatePlanFabricationRequestDto
+{
+    public string Nom { get; set; } = string.Empty;
+    public string? Designation { get; set; }
+    public int? VersionInitiale { get; set; }
+    public string? OperationCode { get; set; }
+    public string? RefFormulaireCodeReference { get; set; }
+    public string? LegendeMoyens { get; set; }
+    public string? Remarques { get; set; }
+    public string? NatureArticleCode { get; set; }
+    public string? FamilleProduitFiniCode { get; set; }
+    public string? PosteCode { get; set; }
+    public string? Libre1 { get; set; }
+    public string? Libre2 { get; set; }
+    public string? Libre3 { get; set; }
+
+    public string? ConfigurationColonnesJson { get; set; }
+
+    public List<ColonneJsonDto> ColonneDefs { get; set; } = new();
+
+    public List<CreatePlanFabricationSectionDto> Sections { get; set; } = new();
+
+    public Guid? ModeleSourceId { get; set; }
+    public string? Statut { get; set; }
+}
+
+public class UpdatePlanFabricationRequestDto
+{
+    public string? Nom { get; set; }
+    public string? LegendeMoyens { get; set; }
+    public string? Remarques { get; set; }
+    public string? Libre1 { get; set; }
+    
+    public string? ConfigurationColonnesJson { get; set; }
+    public string? RefFormulaireCodeReference { get; set; }
+    
+    public string? OperationCode { get; set; }
+
+    public List<CreatePlanFabricationSectionDto> Sections { get; set; } = new();
+}
+
+public class CreatePlanFabricationSectionDto
+{
+    public Guid? Id { get; set; }
+    public int OrdreAffiche { get; set; }
+    public string LibelleSection { get; set; } = string.Empty;
+    public Guid? TypeSectionId { get; set; }
+    public Guid? PeriodiciteId { get; set; }
+    public Guid? RegleEchantillonnageId { get; set; }
+    public string? Notes { get; set; }
+    public string? NormeReference { get; set; }
+    public int? NqaId { get; set; }
+
+    public List<CreatePlanFabricationLigneDto> Lignes { get; set; } = new();
+}
+
+public class CreatePlanFabricationLigneDto
+{
+    public Guid? Id { get; set; }
+    public int OrdreAffiche { get; set; }
+    public Guid? CaracteristiqueId { get; set; }
+    public string? LibelleAffiche { get; set; }
+    public Guid? TypeCaracteristiqueId { get; set; }
+    public Guid? TypeControleId { get; set; }
+    public Guid? MoyenControleId { get; set; }
+    public string? MoyenTexteLibre { get; set; }
+    public string? InstrumentCode { get; set; }
+    public Guid? PeriodiciteId { get; set; }
+    public string? LimiteSpecTexte { get; set; }
+    public bool EstCritique { get; set; }
+    public string? Instruction { get; set; }
+    public string? Observations { get; set; }
+    public string? ImageBase64 { get; set; }
+    public string? MachineCode { get; set; }
+    public bool EstVerifPresence { get; set; }
+    public Guid? DefauthequeId { get; set; }
+    public string? RefPlanProduit { get; set; }
+    public string? MachineCodeCtrlPoste { get; set; }
+    public Guid? RisqueDefautId { get; set; }
+
+    public string? Libre1 { get; set; }
+    public string? Libre2 { get; set; }
+    public string? Libre3 { get; set; }
+    public string? Libre4 { get; set; }
+    public string? Libre5 { get; set; }
+
+    public List<CreatePlanFabricationExtraColonneDto> ExtraColonnes { get; set; } = new();
+}
+
+public class CreatePlanFabricationExtraColonneDto
+{
+    public string CleColonne { get; set; } = string.Empty;
+    public string? ValeurColonne { get; set; }
+    public int OrdreAffiche { get; set; }
+}
+
+public class NouvelleVersionPlanFabricationRequestDto : CreatePlanFabricationRequestDto
+{
+    public Guid AncienId { get; set; }
+}
+
+public class PlanFabricationEnteteDto
 {
     public Guid Id { get; set; }
-    public string TypeDocumentCode { get; set; } = string.Empty;
     public string Nom { get; set; } = string.Empty;
     public string? Designation { get; set; }
     public int Version { get; set; }
@@ -30,36 +131,12 @@ public class DocumentEnteteDto
     public string? Libre2 { get; set; }
     public string? Libre3 { get; set; }
 
-    // For CTRL_POSTE documents: the JSON configuration of equipes/columns
     public string? ConfigurationColonnesJson { get; set; }
-    // For CTRL_POSTE documents: the list of control lines (machine + defaut)
-    public List<ControlePosteLigneDto> LignesControlePoste { get; set; } = new();
-
-    public List<DocumentColonneDefDto> ColonneDefs { get; set; } = new();
-    public List<DocumentSectionDto> Sections { get; set; } = new();
+    
+    public List<PlanFabricationSectionDto> Sections { get; set; } = new();
 }
 
-public class ControlePosteLigneDto
-{
-    public Guid Id { get; set; }
-    public string? MachineCode { get; set; }
-    public Guid? RisqueDefautId { get; set; }
-    public string? LibelleDefaut { get; set; }
-    public int OrdreAffiche { get; set; }
-}
-
-public class DocumentColonneDefDto
-{
-    public Guid Id { get; set; }
-    public Guid EnteteId { get; set; }
-    public string CleColonne { get; set; } = string.Empty;
-    public string LabelAffiche { get; set; } = string.Empty;
-    public string TypeValeur { get; set; } = "TEXTE";
-    public int OrdreAffiche { get; set; }
-    public string? InsertAfter { get; set; }
-}
-
-public class DocumentSectionDto
+public class PlanFabricationSectionDto
 {
     public Guid Id { get; set; }
     public Guid EnteteId { get; set; }
@@ -72,10 +149,10 @@ public class DocumentSectionDto
     public string? NormeReference { get; set; }
     public int? NqaId { get; set; }
 
-    public List<DocumentLigneDto> Lignes { get; set; } = new();
+    public List<PlanFabricationLigneDto> Lignes { get; set; } = new();
 }
 
-public class DocumentLigneDto
+public class PlanFabricationLigneDto
 {
     public Guid Id { get; set; }
     public Guid EnteteId { get; set; }
@@ -104,136 +181,21 @@ public class DocumentLigneDto
     public string? RefPlanProduit { get; set; }
     public string? MachineCodeCtrlPoste { get; set; }
     public Guid? RisqueDefautId { get; set; }
-    
+
     public string? Libre1 { get; set; }
     public string? Libre2 { get; set; }
     public string? Libre3 { get; set; }
     public string? Libre4 { get; set; }
     public string? Libre5 { get; set; }
 
-    public List<DocumentExtraColonneDto> ExtraColonnes { get; set; } = new();
+    public List<PlanFabricationLigneExtraColonneDto> ExtraColonnes { get; set; } = new();
 }
 
-public class DocumentExtraColonneDto
+public class PlanFabricationLigneExtraColonneDto
 {
     public Guid Id { get; set; }
+    public Guid LigneId { get; set; }
     public string CleColonne { get; set; } = string.Empty;
     public string? ValeurColonne { get; set; }
     public int OrdreAffiche { get; set; }
-}
-
-public class CreateDocumentRequestDto
-{
-    public string TypeDocumentCode { get; set; } = string.Empty;
-    public string Nom { get; set; } = string.Empty;
-    public string? Designation { get; set; }
-    public int? VersionInitiale { get; set; }
-    public string? OperationCode { get; set; }
-    public string? RefFormulaireCodeReference { get; set; }
-    public string? LegendeMoyens { get; set; }
-    public string? Remarques { get; set; }
-    public string? NatureArticleCode { get; set; }
-    public string? FamilleProduitFiniCode { get; set; }
-    public string? PosteCode { get; set; }
-    public string? Libre1 { get; set; }
-    public string? Libre2 { get; set; }
-    public string? Libre3 { get; set; }
-
-    public string? ConfigurationColonnesJson { get; set; }
-
-    public List<SopalTrace.Application.Helpers.ColonneJsonDto> ColonneDefs { get; set; } = new();
-
-    public List<CreateDocumentSectionDto> Sections { get; set; } = new();
-
-    public Guid? ModeleSourceId { get; set; }
-    public string? Statut { get; set; }
-}
-
-public class CreateDocumentSectionDto
-{
-    public Guid? Id { get; set; }
-    public int OrdreAffiche { get; set; }
-    public string LibelleSection { get; set; } = string.Empty;
-    public Guid? TypeSectionId { get; set; }
-    public Guid? PeriodiciteId { get; set; }
-    public Guid? RegleEchantillonnageId { get; set; }
-    public string? Notes { get; set; }
-    public string? NormeReference { get; set; }
-    public int? NqaId { get; set; }
-
-    public List<CreateDocumentLigneDto> Lignes { get; set; } = new();
-}
-
-public class CreateDocumentLigneDto
-{
-    public Guid? Id { get; set; }
-    public int OrdreAffiche { get; set; }
-    public Guid? CaracteristiqueId { get; set; }
-    public string? LibelleAffiche { get; set; }
-    public Guid? TypeCaracteristiqueId { get; set; }
-    public Guid? TypeControleId { get; set; }
-    public Guid? MoyenControleId { get; set; }
-    public string? MoyenTexteLibre { get; set; }
-    public string? InstrumentCode { get; set; }
-    public Guid? PeriodiciteId { get; set; }
-    public string? LimiteSpecTexte { get; set; }
-    public bool EstCritique { get; set; }
-    public string? Instruction { get; set; }
-    public string? Observations { get; set; }
-    public string? ImageBase64 { get; set; }
-    public string? MachineCode { get; set; }
-    public bool EstVerifPresence { get; set; }
-    public Guid? DefauthequeId { get; set; }
-    public string? RefPlanProduit { get; set; }
-    public string? MachineCodeCtrlPoste { get; set; }
-    public Guid? RisqueDefautId { get; set; }
-
-    public string? Libre1 { get; set; }
-    public string? Libre2 { get; set; }
-    public string? Libre3 { get; set; }
-    public string? Libre4 { get; set; }
-    public string? Libre5 { get; set; }
-
-    public List<CreateDocumentExtraColonneDto> ExtraColonnes { get; set; } = new();
-}
-
-public class CreateDocumentExtraColonneDto
-{
-    public string CleColonne { get; set; } = string.Empty;
-    public string? ValeurColonne { get; set; }
-    public int OrdreAffiche { get; set; }
-}
-
-public class CreateDocumentColonneDefDto
-{
-    public string CleColonne { get; set; } = string.Empty;
-    public string LabelAffiche { get; set; } = string.Empty;
-    public string TypeValeur { get; set; } = "TEXTE";
-    public int OrdreAffiche { get; set; }
-}
-
-public class NouvelleVersionDocumentRequestDto : CreateDocumentRequestDto
-{
-    public Guid AncienId { get; set; }
-}
-
-public class RestaurerDocumentRequestDto
-{
-    public Guid DocumentArchiveId { get; set; }
-    public string MotifRestoration { get; set; } = string.Empty;
-}
-
-public class UpdateDocumentRequestDto
-{
-    public string? Nom { get; set; }
-    public string? LegendeMoyens { get; set; }
-    public string? Remarques { get; set; }
-    public string? Libre1 { get; set; }
-    
-    public string? ConfigurationColonnesJson { get; set; }
-    public string? RefFormulaireCodeReference { get; set; }
-    
-    public string? OperationCode { get; set; }
-
-    public List<CreateDocumentSectionDto> Sections { get; set; } = new();
 }
